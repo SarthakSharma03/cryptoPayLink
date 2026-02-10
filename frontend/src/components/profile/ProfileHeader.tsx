@@ -10,12 +10,7 @@ export function ProfileHeader({
   onToggleEdit: () => void;
 }) {
   const { userData } = useUser();
-  const initials = (userData.fullName || 'User')
-    .split(' ')
-    .map((s) => s[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const avatarUrl = userData.avatarUrl || '/ChatGPT Image Feb 10, 2026, 07_59_59 AM.png';
 
   return (
     <motion.div
@@ -25,13 +20,17 @@ export function ProfileHeader({
       className="flex items-center justify-between"
     >
       <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 text-white flex items-center justify-center text-lg font-bold shadow-md">
-  
-            <span>{initials}</span>
-  
+        <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-pink-500 via-orange-400 to-purple-600 p-[3px] shadow-lg">
+          <div className="h-full w-full rounded-full bg-white overflow-hidden">
+            <img
+              src={avatarUrl}
+              alt="Profile photo"
+              className="h-full w-full object-cover object-center"
+            />
+          </div>
         </div>
         <div>
-          <div className="text-xl font-bold text-gray-900">{userData.fullName || 'User'}</div>
+          <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{userData.fullName || 'User'}</div>
           <div className="text-sm text-gray-500">{userData.email || ''}</div>
         </div>
       </div>

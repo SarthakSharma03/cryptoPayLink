@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 export interface UserData {
   fullName: string;
@@ -26,14 +26,21 @@ const initialUserData: UserData = {
   phone: '',
   dob: '',
   address: '',
-  avatarUrl: ''
+  avatarUrl: '/ChatGPT Image Feb 10, 2026, 07_59_59 AM.png'
 
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [userData, setUserData] = useState<UserData>(initialUserData);
+  const [userData, setUserData] = useState<UserData>(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+      return raw ? (JSON.parse(raw) as UserData) : initialUserData;
+    } catch {
+      return initialUserData;
+    }
+  });
 
   const updateUserData = (data: Partial<UserData>) => {
     setUserData((prev) => ({ ...prev, ...data }));
@@ -42,6 +49,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const resetUserData = () => {
     setUserData(initialUserData);
   };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('userData', JSON.stringify(userData));
+    } catch {
+      void 0;
+    }
+  }, [userData]);
 
   return (
     <UserContext.Provider value={{ userData, updateUserData, resetUserData }}>

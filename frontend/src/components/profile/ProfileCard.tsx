@@ -9,7 +9,7 @@ export function ProfileCard({ children }: { children: ReactNode }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="p-6 bg-white rounded-2xl shadow-md">
+      <Card className="p-6 bg-white/90 backdrop-blur rounded-2xl shadow-lg border border-purple-100">
         {children}
       </Card>
     </motion.div>

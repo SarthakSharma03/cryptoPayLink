@@ -1,14 +1,19 @@
 import { motion } from 'framer-motion';
 import { Button } from '../ui/Button';
-import { useUser } from '../../context/UserContext';
 import { NavLink, useLocation, useNavigate } from 'react-router';
+import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { Modal } from '../ui/Modal';
 
 export function DashboardHeader() {
-  const { userData } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const isPaymentsActive = location.pathname.startsWith('/payments');
   const isUserProfileActive = location.pathname.startsWith('/profile');
+  const isDashboardActive = location.pathname.startsWith('/dashboard');
 
   return (
     <motion.header
@@ -35,25 +40,82 @@ export function DashboardHeader() {
   </NavLink>
 </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant={isPaymentsActive ? 'primary' : 'ghost'}
-          size="md"
-          className="relative cursor-pointer"
-          onClick={() => navigate('/payments')}
-        >
+      <div className="hidden md:flex items-center gap-2">
+        <Button variant={isDashboardActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/dashboard')}>
+          Dashboard
+        </Button>
+        <Button variant={isPaymentsActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/payments')}>
           Payment History
         </Button>
-        <Button variant={isUserProfileActive ? 'primary' : 'ghost'} className='cursor-pointer' size="md" onClick={() => navigate('/profile')}>
+        <Button variant={isUserProfileActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/profile')}>
           User Profile
         </Button>
-        <Button variant= 'ghost'  size="md" className="ml-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
+        <Button variant="ghost" size="md" className="ml-2" onClick={() => navigate('/create-link')}>
           Create Payment Link
         </Button>
+        <Button
+          variant="outline"
+          size="md"
+          onClick={() => setLogoutOpen(true)}
+        >
+          Logout
+        </Button>
       </div>
-     <div className="text-xl cursor-pointer font-semibold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-  Welcome, <span>{userData.username || 'User'}</span>
-</div>
+      <div className="md:hidden">
+        <Button variant="ghost" size="md" onClick={() => setMenuOpen((v) => !v)}>
+          Menu
+        </Button>
+      </div>
+      <motion.div
+        initial={false}
+        animate={{ height: menuOpen ? 'auto' : 0, opacity: menuOpen ? 1 : 0 }}
+        className="absolute left-0 right-0 top-full md:hidden bg-white border-t border-gray-200 shadow-sm overflow-hidden"
+      >
+        <div className="p-3 grid grid-cols-1 gap-2">
+          <Button variant={isDashboardActive ? 'primary' : 'ghost'} size="md" onClick={() => { setMenuOpen(false); navigate('/dashboard'); }}>
+            Dashboard
+          </Button>
+          <Button variant={isPaymentsActive ? 'primary' : 'ghost'} size="md" onClick={() => { setMenuOpen(false); navigate('/payments'); }}>
+            Payment History
+          </Button>
+          <Button variant={isUserProfileActive ? 'primary' : 'ghost'} size="md" onClick={() => { setMenuOpen(false); navigate('/profile'); }}>
+            User Profile
+          </Button>
+          <Button variant="ghost" size="md" onClick={() => { setMenuOpen(false); navigate('/create-link'); }}>
+            Create Payment Link
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => {
+              setMenuOpen(false);
+              setLogoutOpen(true);
+            }}
+          >
+            Logout
+          </Button>
+        </div>
+      </motion.div>
+      <Modal
+        isOpen={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        title="Confirm Logout"
+      >
+        <p className="text-sm text-gray-600">Are you sure you want to log out?</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setLogoutOpen(false)}>Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setLogoutOpen(false);
+              await logout();
+              navigate('/');
+            }}
+          >
+            Yes, Logout
+          </Button>
+        </div>
+      </Modal>
 
     </motion.header>
   );

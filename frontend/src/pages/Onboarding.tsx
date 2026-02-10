@@ -7,8 +7,15 @@ import { StepTwo } from '../components/stepper/StepTwo';
 import { StepperProvider, useStepperContext } from '../context/StepperContext';
 import { StepThree } from '../components/stepper/StepThree';
 import { StepFour } from '../components/stepper/StepFour';
+import { Navigate } from 'react-router';
+import { useUser } from '../context/UserContext';
 
 export function Onboarding() {
+  const { userData } = useUser();
+  const completed = Boolean(userData.fullName && userData.username && userData.country);
+  if (completed) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">

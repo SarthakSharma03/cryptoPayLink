@@ -7,9 +7,11 @@ import { PaymentRecord } from '../../types/paymentHistory';
 export function PaymentTable({
   records,
   isLoading,
+  onView,
 }: {
   records: PaymentRecord[];
   isLoading?: boolean;
+  onView?: (id: string) => void;
 }) {
   return (
     <Card className="p-0 overflow-hidden">
@@ -64,8 +66,8 @@ export function PaymentTable({
                     <td className="py-3 px-4">
                       <StatusBadge status={r.status} />
                     </td>
-                   <td className="py-3 px-4">
-                      <Button size="sm" variant="outline">View Details</Button>
+                    <td className="py-3 px-4">
+                      <Button size="sm" variant="outline" onClick={() => onView?.(r.id)}>View Details</Button>
                     </td>
                   </motion.tr>
                 ))}

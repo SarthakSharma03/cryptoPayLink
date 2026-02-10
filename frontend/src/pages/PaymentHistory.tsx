@@ -1,36 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
-import { Card } from '../components/ui/Card';
 import { PaymentSearchBar } from '../components/payment-history/PaymentSearchBar';
 import { PaymentFilters, QuickRange } from '../components/payment-history/PaymentFilters';
 import { PaymentTable } from '../components/payment-history/PaymentTable';
 import { Pagination } from '../components/payment-history/Pagination';
 import { PaymentRecord } from '../types/paymentHistory';
+import { usePayments } from '../context/PaymentsContext';
+import { Modal } from '../components/ui/Modal';
+import { Copy } from 'lucide-react';
 
-function generateMockPayments(): PaymentRecord[] {
-  const currencies: PaymentRecord['currency'][] = ['BTC', 'ETH', 'USDT', 'MATIC'];
-  const statuses: PaymentRecord['status'][] = ['completed', 'pending', 'failed', 'expired'];
-
-  return Array.from({ length: 4 }, (_, i) => {
-    const currency = currencies[i % currencies.length];
-    const status = statuses[i % statuses.length];
-    const date = new Date(Date.now() - i * 86400000).toISOString();
-    const wallet = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
-    const email = i % 3 === 0 ? `user${i}@mail.com` : undefined;
-
-    return {
-      id: String(i + 1),
-      transactionId: `tx_${Math.random().toString(36).slice(2, 10)}`,
-      email,
-      walletAddress: email ? undefined : wallet,
-      amount: Math.floor(Math.random() * 5000) + 20,
-      currency,
-      status,
-      date,
-    };
-  });
-}
+// removed local mock generator; data comes from PaymentsContext
 
 type Filters = {
   status: PaymentRecord['status'] | 'all';
@@ -42,11 +22,12 @@ type Filters = {
 
 export function PaymentHistoryPage() {
   const [query, setQuery] = useState('');
-  const [allRecords, setAllRecords] = useState<PaymentRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { payments: allRecords, loading: isLoading, getById } = usePayments();
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [nowTs, setNowTs] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
     status: 'all',
@@ -56,13 +37,6 @@ export function PaymentHistoryPage() {
     amountRange: {},
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAllRecords(generateMockPayments());
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
   useEffect(() => {
     setNowTs(Date.now());
   }, []);
@@ -139,9 +113,7 @@ export function PaymentHistoryPage() {
           transition={{ duration: 0.4 }}
           className="space-y-4"
         >
-          <Card className="p-6 bg-white/80 backdrop-blur-sm">
-            <PaymentSearchBar value={query} onChange={setQuery} />
-          </Card>
+          <PaymentSearchBar value={query} onChange={setQuery} />
 
           <PaymentFilters
             records={allRecords}
@@ -160,7 +132,14 @@ export function PaymentHistoryPage() {
             }
           />
 
-          <PaymentTable records={paged} isLoading={isLoading} />
+          <PaymentTable
+            records={paged}
+            isLoading={isLoading}
+            onView={(id) => {
+              setSelectedId(id);
+              setOpen(true);
+            }}
+          />
 
           <Pagination
             page={page}
@@ -170,6 +149,83 @@ export function PaymentHistoryPage() {
           />
         </motion.section>
       </div>
+      {selectedId && (
+        <Modal
+          isOpen={open}
+          onClose={() => {
+            setOpen(false);
+            setSelectedId(null);
+          }}
+          title="Payment details"
+        >
+          {(() => {
+            const record = getById(selectedId);
+            if (!record) return <div className="text-sm text-gray-600">Payment not found.</div>;
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Payment ID</div>
+                  <div className="font-mono text-xs">{record.id}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Original price</div>
+                  <div className="text-sm">{record.currency === 'USDT' || record.currency === 'USDC' ? `${record.amount} USD` : 'N/A'}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Pay price</div>
+                  <div className="text-sm font-semibold">{record.amount} {record.currency}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Actually paid</div>
+                  <div className="text-sm">{record.status === 'completed' ? `${record.amount} ${record.currency}` : `0 ${record.currency}`}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Outcome price</div>
+                  <div className="text-sm">N/A</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Type</div>
+                  <div className="text-sm">crypto2crypto</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Status</div>
+                  <div className={record.status === 'pending' ? 'text-yellow-700' : record.status === 'completed' ? 'text-green-700' : record.status === 'failed' ? 'text-red-700' : 'text-gray-700'}>
+                    <span className="text-sm font-semibold capitalize">{record.status}</span>
+                    {record.status === 'pending' && <span className="ml-2 h-3 w-3 inline-block rounded-full border-2 border-current border-t-transparent animate-spin" />}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Created at</div>
+                  <div className="text-sm">{new Date(record.date).toLocaleString()}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Updated at</div>
+                  <div className="text-sm">{new Date(record.date).toLocaleString()}</div>
+                </div>
+                <div className="flex items-start justify-between">
+                  <div className="text-sm text-gray-600">Payin address</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-mono text-xs break-all font-semibold">{record.walletAddress || '—'}</div>
+                    {record.walletAddress && (
+                      <button
+                        className="rounded p-1 hover:bg-gray-100"
+                        onClick={() => navigator.clipboard.writeText(record.walletAddress!)}
+                        aria-label="Copy payin address"
+                      >
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start justify-between">
+                  <div className="text-sm text-gray-600">Payout address</div>
+                  <div className="font-mono text-xs break-all">—</div>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
     </div>
   );
 }

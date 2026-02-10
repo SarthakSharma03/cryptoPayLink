@@ -2,12 +2,15 @@ import { motion } from 'framer-motion';
 import { WalletConnectButton } from '../components/wallet/WalletConnectButton';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router';
+import { useUser } from '../context/UserContext';
 
 export function Landing() {
   const { isAuthenticated, walletAddress } = useAuth();
+  const { userData } = useUser();
 
   if (isAuthenticated && walletAddress) {
-    return <Navigate to="/onboarding" />;
+    const completed = Boolean(userData.fullName && userData.username && userData.country);
+    return <Navigate to={completed ? '/dashboard' : '/onboarding'} replace />;
   }
 
   return (

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { PaymentsTable } from './PaymentsTable';
 import { PaymentCardList } from './PaymentCardList';
 import { Payment } from '../../types/payments';
+import { Table, LayoutGrid } from 'lucide-react';
 
 export function PaymentsSection({ payments }: { payments: Payment[] }) {
   const [view, setView] = useState<'table' | 'card'>('table');
@@ -18,14 +19,14 @@ export function PaymentsSection({ payments }: { payments: Payment[] }) {
             size="sm"
             onClick={() => setView('table')}
           >
-            Table View
+            <Table className="h-4 w-4" />
           </Button>
           <Button
             variant={view === 'card' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setView('card')}
           >
-            Card View
+            <LayoutGrid className="h-4 w-4" />
           </Button>
         </div>
       </div>

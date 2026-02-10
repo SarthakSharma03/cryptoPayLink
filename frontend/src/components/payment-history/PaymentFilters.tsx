@@ -7,6 +7,8 @@ import { PaymentHistoryStatus, PaymentRecord } from '../../types/paymentHistory'
 
 export type QuickRange = 'today' | '7d' | '1m' | '1y' | 'custom' | 'all';
 
+import { useState } from 'react';
+
 export function PaymentFilters({
   records,
   filters,
@@ -29,19 +31,31 @@ export function PaymentFilters({
     amountRange: { min?: number; max?: number };
   }>) => void;
   onReset: () => void;
+  defaultCollapsed?: boolean;
 }) {
+  const [open, setOpen] = useState(true);
   const currencyOptions = useMemo(() => {
     const set = new Set(records.map((r) => r.currency));
     return ['all', ...Array.from(set)];
   }, [records]);
 
   return (
-    <Card className="p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+    <Card className="p-0">
+      <button
+        className="w-full text-left px-4 py-3 flex items-center justify-between"
+        onClick={() => setOpen((v) => !v)}
       >
+        <span className="text-sm font-medium">Filters</span>
+        <span className="text-xs text-gray-500">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
         <div>
           <label className="text-xs text-gray-600 mb-1 block">Payment Status</label>
           <select
@@ -81,7 +95,7 @@ export function PaymentFilters({
         </div>
 
 
-        {/* <div className="col-span-1 lg:col-span-3">
+        <div className="col-span-1 lg:col-span-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-gray-600 mb-1 block">Quick Select</label>
@@ -126,7 +140,7 @@ export function PaymentFilters({
               )}
             </AnimatePresence>
           </div>
-        </div> */}
+        </div>
 
         <div>
           <Input
@@ -152,7 +166,9 @@ export function PaymentFilters({
             Reset Filters
           </Button>
         </div>
-      </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   );
 }

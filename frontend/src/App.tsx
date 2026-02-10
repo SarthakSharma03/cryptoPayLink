@@ -4,6 +4,9 @@ import { Onboarding } from "../src/pages/Onboarding";
 import { Dashboard } from "../src/pages/Dashboard";
 import { PaymentHistoryPage } from "../src/pages/PaymentHistory";
 import { ProfilePage } from "../src/pages/Profile";
+import { CreatePaymentLinkPage } from "../src/pages/CreatePaymentLink";
+import { PayPage } from "../src/pages/PayPage";
+import { OrderDetailPage } from "../src/pages/OrderDetail";
 import { useAuth } from "../src/context/AuthContext";
 
 function ProtectedLayout() {
@@ -34,6 +37,18 @@ const router = createBrowserRouter([
       {
         path: "/payments",
         element: <PaymentHistoryPage />
+      },
+      {
+        path: "/create-link",
+        element: <CreatePaymentLinkPage />
+      },
+      {
+        path: "/order/:token",
+        element: <OrderDetailPage />
+      },
+      {
+        path: "/pay/:token",
+        element: <PayPage />
       },
       {
         path: "/profile",

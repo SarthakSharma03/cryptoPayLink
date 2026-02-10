@@ -5,12 +5,30 @@ import { AnalyticsSection } from '../components/dashboard/AnalyticsSection';
 import { TotalEarningsCard } from '../components/dashboard/TotalEarningsCard';
 import { PaymentsSection } from '../components/dashboard/PaymentsSection';
 import { Payment } from '../types/payments';
+import { usePayments } from '../context/PaymentsContext';
 
 export function Dashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const { payments: ctxPayments } = usePayments();
+  const convertedCtx = useMemo<Payment[]>(() => {
+    return ctxPayments.map((r) => ({
+      id: r.id,
+      senderWallet: r.walletAddress || '—',
+      currency: r.currency,
+      amount: r.amount,
+      date: r.date,
+      status: r.status === 'completed' ? 'paid' : 'pending',
+    }));
+  }, [ctxPayments]);
+
+  const displayPayments = useMemo<Payment[]>(() => {
+    const all = [...convertedCtx, ...payments];
+    return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [convertedCtx, payments]);
+
   const total = useMemo(
-    () => payments.reduce((sum, p) => sum + p.amount, 0),
-    [payments]
+    () => displayPayments.reduce((sum, p) => sum + p.amount, 0),
+    [displayPayments]
   );
 
   useEffect(() => {
@@ -43,7 +61,7 @@ export function Dashboard() {
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           <div className="md:col-span-2">
-            <AnalyticsSection payments={payments} />
+            <AnalyticsSection payments={displayPayments} />
           </div>
           <div className="md:col-span-1">
             <TotalEarningsCard total={total} />
@@ -54,7 +72,7 @@ export function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <PaymentsSection payments={payments} />
+          <PaymentsSection payments={displayPayments.slice(0, 4)} />
         </motion.section>
       </div>
     </div>
