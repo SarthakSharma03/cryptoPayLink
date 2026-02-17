@@ -10,13 +10,13 @@ import { PaymentsProvider } from './context/PaymentsContext'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
   <WalletProvider>
-   <AuthProvider>
           <UserProvider>
+   <AuthProvider>
             <PaymentsProvider>
               <App/>
             </PaymentsProvider>
-          </UserProvider>
          </AuthProvider>
+          </UserProvider>
 </WalletProvider>
   </StrictMode>
 )

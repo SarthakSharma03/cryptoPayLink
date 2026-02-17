@@ -1,17 +1,12 @@
 import { motion } from 'framer-motion';
 import { WalletConnectButton } from '../components/wallet/WalletConnectButton';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router';
-import { useUser } from '../context/UserContext';
+import { Button } from '../components/ui/Button';
+import { useNavigate } from 'react-router';
 
 export function Landing() {
-  const { isAuthenticated, walletAddress } = useAuth();
-  const { userData } = useUser();
-
-  if (isAuthenticated && walletAddress) {
-    const completed = Boolean(userData.fullName && userData.username && userData.country);
-    return <Navigate to={completed ? '/dashboard' : '/onboarding'} replace />;
-  }
+  const { isWalletConnected, walletAddress, authenticate } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center p-6 text-center 
@@ -39,8 +34,22 @@ export function Landing() {
           </p>
         </div>
 
-        <div className="flex justify-center  ">
-          <WalletConnectButton   />
+        <div className="flex justify-center gap-3">
+          <WalletConnectButton />
+          {isWalletConnected && walletAddress ? (
+            <Button
+              variant="primary"
+              size="md"
+              className='cursor-pointer'
+              onClick={async () => {
+                const res = await authenticate();
+                const completed = Boolean(res?.isProfileComplete);
+                navigate(completed ? '/dashboard' : '/onboarding');
+              }}
+            >
+              Get Started
+            </Button>
+          ) : null}
         </div>
 
       

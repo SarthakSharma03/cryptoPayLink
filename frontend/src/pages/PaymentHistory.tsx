@@ -10,7 +10,7 @@ import { usePayments } from '../context/PaymentsContext';
 import { Modal } from '../components/ui/Modal';
 import { Copy } from 'lucide-react';
 
-// removed local mock generator; data comes from PaymentsContext
+
 
 type Filters = {
   status: PaymentRecord['status'] | 'all';

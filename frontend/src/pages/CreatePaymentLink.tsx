@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { Card } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { PaymentRecord } from '../types/paymentHistory';
 import { Modal } from '../components/ui/Modal';
@@ -10,13 +9,14 @@ import QRCode from 'react-qr-code';
 import { Copy } from 'lucide-react';
 import { usePayments } from '../context/PaymentsContext';
 import { useNavigate } from 'react-router';
+import { SUPPORTED_CURRENCIES } from '../constants';
+import { CreatePaymentForm, CreatePaymentFormValues } from '../components/payment/CreatePaymentForm';
+import { createPaymentLink } from '../services/Api';
 
 export function CreatePaymentLinkPage() {
-  const currencies = useMemo<(PaymentRecord['currency'])[]>(() => ['BTC', 'ETH', 'USDT', 'USDC', 'SOL', 'MATIC'], []);
+  const currencies = useMemo<(PaymentRecord['currency'])[]>(() => SUPPORTED_CURRENCIES as PaymentRecord['currency'][], []);
   const [amount, setAmount] = useState<string>('');
   const [currency, setCurrency] = useState<PaymentRecord['currency']>('USDT');
-  const [description, setDescription] = useState('');
-  const [email, setEmail] = useState('');
   const [wallet, setWallet] = useState('');
   const [generatedUrl, setGeneratedUrl] = useState<string>('');
   const [generatedPath, setGeneratedPath] = useState<string>('');
@@ -26,10 +26,7 @@ export function CreatePaymentLinkPage() {
   const { setPayments, payments } = usePayments();
   const navigate = useNavigate();
 
-  const isValid = useMemo(() => {
-    const a = Number(amount);
-    return a > 0 && currencies.includes(currency) && wallet.trim().length >= 12;
-  }, [amount, currency, currencies, wallet]);
+  useMemo(() => currencies, [currencies]);
 
   useEffect(() => {
     if (!expireTs) return;
@@ -45,33 +42,36 @@ export function CreatePaymentLinkPage() {
     return () => clearInterval(id);
   }, [expireTs]);
 
-  const onGenerate = () => {
-    const token = Math.random().toString(36).slice(2, 10);
-    const params = new URLSearchParams();
-    params.set('amount', amount);
-    params.set('currency', currency);
-    params.set('wallet', wallet);
-    if (description) params.set('desc', description);
-    if (email) params.set('email', email);
-    const expiresAtIso = new Date(Date.now() + 20 * 60 * 1000).toISOString();
-    params.set('expiresAt', expiresAtIso);
-    const url = `${window.location.origin}/pay/${token}?${params.toString()}`;
-    setGeneratedUrl(url);
-    setGeneratedPath(`/pay/${token}?${params.toString()}`);
+  const onGenerate = async (values: CreatePaymentFormValues) => {
+    const dto = await createPaymentLink({
+      amount: Number(values.amount),
+      currency: values.currency,
+      wallet: values.wallet,
+      description: values.description,
+      email: values.email,
+      expiresInMinutes: 20,
+    });
+    setGeneratedUrl(dto.url);
+    setGeneratedPath(dto.shortPath);
     setIsOrderOpen(true);
-    setExpireTs(new Date(expiresAtIso).getTime());
+    setExpireTs(new Date(dto.expiresAt).getTime());
 
     const newRecord = {
-      id: token,
-      transactionId: `tx_${token}`,
-      email: email || undefined,
-      walletAddress: wallet,
-      amount: Number(amount),
-      currency,
+      id: dto.id,
+      transactionId: `tx_${dto.id}`,
+      email: dto.email || undefined,
+      walletAddress: dto.wallet,
+      url: dto.url,
+      amount: Number(dto.amount),
+      currency: dto.currency,
       status: 'pending' as const,
       date: new Date().toISOString(),
     };
     setPayments([newRecord, ...payments]);
+
+    setAmount(String(dto.amount));
+    setCurrency(dto.currency);
+    setWallet(dto.wallet);
   };
 
 
@@ -83,68 +83,19 @@ export function CreatePaymentLinkPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          className="w-[65%] mx-auto gap-6"
         >
-          <Card className="p-6 bg-white rounded-2xl shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Create Payment Link</h2>
-            <div className="grid grid-cols-1 gap-4">
-              <Input
-                label="Amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-              />
-              <Input
-                label="Receiver Wallet Address"
-                value={wallet}
-                onChange={(e) => setWallet(e.target.value)}
-                placeholder="0x... or bc1..."
-              />
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">Currency</label>
-                <select
-                  className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as PaymentRecord['currency'])}
-                >
-                  {currencies.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Input
-                label="Description (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Payment purpose"
-              />
-              <Input
-                label="Payer Email (optional)"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="sender@mail.com"
-                type="email"
-              />
-              <Button
-                variant="primary"
-                className="mt-2"
-                disabled={!isValid}
-                onClick={onGenerate}
-              >
-                Create Payment Link
-              </Button>
-            </div>
+          <Card className="p-6 bg-white m-auto rounded-2xl shadow-md ">
+            <h2 className="text-xl font-semibold mb-4 cursor-pointer">Create Payment Link</h2>
+            <CreatePaymentForm currencies={currencies} onSubmit={onGenerate} />
           </Card>
 
         </motion.section>
       </div>
       <Modal isOpen={isOrderOpen} onClose={() => setIsOrderOpen(false)} title="Order details">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_160px] gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_160px] gap-6">
           <div className="space-y-3">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-0.5">
               <div className="text-xs text-gray-600">Expires in</div>
               <div className="ml-2 text-xs font-semibold">{timeLeft}</div>
             </div>
@@ -155,7 +106,7 @@ export function CreatePaymentLinkPage() {
                 {amount} {currency}
               </div>
             </div>
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-1">
               <div className="text-sm text-gray-600">Address</div>
               <div className="flex items-center gap-2">
                 <div className="font-mono text-xs break-all">{wallet}</div>
@@ -195,6 +146,7 @@ export function CreatePaymentLinkPage() {
               </div>
               <div className="flex justify-end">
                 <Button
+                className='cursor-pointer'
                   variant="primary"
                   size="sm"
                   onClick={() => navigate(generatedPath)}

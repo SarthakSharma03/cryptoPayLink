@@ -21,10 +21,10 @@ export function Pagination({
         Page {page} of {totalPages}
       </div>
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" disabled={!canPrev} onClick={() => onPageChange(page - 1)}>
+        <Button size="sm" variant="outline" className='cursor-pointer' disabled={!canPrev} onClick={() => onPageChange(page - 1)}>
           Prev
         </Button>
-        <Button size="sm" variant="outline" disabled={!canNext} onClick={() => onPageChange(page + 1)}>
+        <Button size="sm" variant="outline" className='cursor-pointer' disabled={!canNext} onClick={() => onPageChange(page + 1)}>
           Next
         </Button>
       </div>

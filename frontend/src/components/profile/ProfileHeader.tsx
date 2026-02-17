@@ -10,7 +10,7 @@ export function ProfileHeader({
   onToggleEdit: () => void;
 }) {
   const { userData } = useUser();
-  const avatarUrl = userData.avatarUrl || '/ChatGPT Image Feb 10, 2026, 07_59_59 AM.png';
+  const avatarUrl =  '/ChatGPT Image Feb 10, 2026, 07_59_59 AM.png';
 
   return (
     <motion.div
@@ -20,12 +20,12 @@ export function ProfileHeader({
       className="flex items-center justify-between"
     >
       <div className="flex items-center gap-4">
-        <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-pink-500 via-orange-400 to-purple-600 p-[3px] shadow-lg">
+        <div className="h-18 w-18 rounded-full  shadow-lg">
           <div className="h-full w-full rounded-full bg-white overflow-hidden">
             <img
               src={avatarUrl}
               alt="Profile photo"
-              className="h-full w-full object-cover object-center"
+              className="h-20 w-20 object-center"
             />
           </div>
         </div>

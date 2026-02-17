@@ -12,7 +12,7 @@ import { useUser } from '../context/UserContext';
 
 export function Onboarding() {
   const { userData } = useUser();
-  const completed = Boolean(userData.fullName && userData.username && userData.country);
+  const completed = Boolean(userData.isProfileComplete);
   if (completed) {
     return <Navigate to="/dashboard" replace />;
   }

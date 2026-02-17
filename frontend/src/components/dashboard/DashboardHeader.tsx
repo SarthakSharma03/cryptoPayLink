@@ -14,7 +14,8 @@ export function DashboardHeader() {
   const isPaymentsActive = location.pathname.startsWith('/payments');
   const isUserProfileActive = location.pathname.startsWith('/profile');
   const isDashboardActive = location.pathname.startsWith('/dashboard');
-
+  const isCreatePaymentLinkActive = location.pathname.startsWith('/create-link')
+ const logo = '/logo.png'
   return (
     <motion.header
       initial={{ opacity: 0, y: -10 }}
@@ -22,40 +23,41 @@ export function DashboardHeader() {
       transition={{ duration: 0.4 }}
       className="flex items-center justify-between px-6 py-4 bg-white rounded-xl shadow-sm border border-gray-200"
     >
-     <div className="flex items-center gap-3">
-    <NavLink to='/dashboard'>
-<div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 shadow-lg shadow-pink-500/30 hover:scale-110 hover:rotate-12 ease-in-out duration-300">
+     <div >
+    <NavLink  to='/dashboard' className="flex items-center  ">
+<div className="h-full w-full  rounded-full bg-white overflow-hidden">
    
-    <span className="text-white font-bold text-lg">₿</span>
+    <img src={logo} alt="logo" className=' h-22 w-22' />
   </div>
 
 
-  <span className="text-xl font-bold tracking-tight hover:scale-110 ease-in-out duration-300">
+  <span className="text-xl font-bold tracking-tight  hover:scale-110 ease-in-out duration-300">
     <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-      Crypto
+      Coin
     </span>
-    <span className="text-gray-900">Pay</span>
-    <span className="text-gray-500">Link</span>
+    <span className="text-gray-900">ova</span>
+   
   </span>
   </NavLink>
 </div>
 
       <div className="hidden md:flex items-center gap-2">
-        <Button variant={isDashboardActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/dashboard')}>
+        <Button variant={isDashboardActive ? 'primary' : 'ghost'} size="md" className='cursor-pointer' onClick={() => navigate('/dashboard')}>
           Dashboard
         </Button>
-        <Button variant={isPaymentsActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/payments')}>
+        <Button variant={isPaymentsActive ? 'primary' : 'ghost'} size="md" className='cursor-pointer' onClick={() => navigate('/payments')}>
           Payment History
         </Button>
-        <Button variant={isUserProfileActive ? 'primary' : 'ghost'} size="md" onClick={() => navigate('/profile')}>
+        <Button variant={isUserProfileActive ? 'primary' : 'ghost'} size="md" className='cursor-pointer' onClick={() => navigate('/profile')}>
           User Profile
         </Button>
-        <Button variant="ghost" size="md" className="ml-2" onClick={() => navigate('/create-link')}>
+        <Button variant={isCreatePaymentLinkActive ? 'primary' : 'ghost'} size="md" className="ml-2 cursor-pointer" onClick={() => navigate('/create-link')}>
           Create Payment Link
         </Button>
         <Button
           variant="outline"
           size="md"
+          className='cursor-pointer'
           onClick={() => setLogoutOpen(true)}
         >
           Logout
@@ -103,8 +105,9 @@ export function DashboardHeader() {
       >
         <p className="text-sm text-gray-600">Are you sure you want to log out?</p>
         <div className="mt-6 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setLogoutOpen(false)}>Cancel</Button>
+          <Button variant="ghost" className='cursor-pointer' onClick={() => setLogoutOpen(false)}>Cancel</Button>
           <Button
+          className='cursor-pointer'
             variant="outline"
             onClick={async () => {
               setLogoutOpen(false);

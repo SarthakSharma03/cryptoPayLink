@@ -46,7 +46,7 @@ export function PaymentFilters({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="text-sm font-medium">Filters</span>
-        <span className="text-xs text-gray-500">{open ? 'Hide' : 'Show'}</span>
+        <span className="text-xs text-gray-500 cursor-pointer">{open ? 'Hide' : 'Show'}</span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -59,7 +59,7 @@ export function PaymentFilters({
         <div>
           <label className="text-xs text-gray-600 mb-1 block">Payment Status</label>
           <select
-            className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer"
             value={filters.status}
             onChange={(e) =>
               onChange({
@@ -67,7 +67,7 @@ export function PaymentFilters({
               })
             }
           >
-            {['all', 'completed', 'pending', 'failed', 'expired'].map((opt) => (
+            {['all', 'completed', 'pending', 'failed',].map((opt) => (
               <option key={opt} value={opt}>
                 {opt[0].toUpperCase() + opt.slice(1)}
               </option>
@@ -78,7 +78,7 @@ export function PaymentFilters({
         <div>
           <label className="text-xs text-gray-600 mb-1 block">Currency</label>
           <select
-            className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer"
             value={filters.currency}
             onChange={(e) =>
               onChange({
@@ -100,7 +100,7 @@ export function PaymentFilters({
             <div>
               <label className="text-xs text-gray-600 mb-1 block">Quick Select</label>
               <select
-                className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer"
                 value={filters.quickRange}
                 onChange={(e) =>
                   onChange({
@@ -162,7 +162,7 @@ export function PaymentFilters({
         </div>
 
         <div className="md:col-span-2 lg:col-span-1 flex items-end">
-          <Button variant="outline" className="w-full" onClick={onReset}>
+          <Button variant="outline" className="w-full cursor-pointer" onClick={onReset}>
             Reset Filters
           </Button>
         </div>

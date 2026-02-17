@@ -26,10 +26,8 @@ export function StepFour() {
     e.preventDefault();
     if (!isValid) return;
 
-   
-    console.log('Final Onboarding Data:', userData);
+    updateUserData({ isProfileComplete: true });
 
-   
     navigate('/dashboard');
   };
 

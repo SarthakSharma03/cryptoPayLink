@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { AnalyticsSection } from '../components/dashboard/AnalyticsSection';
@@ -8,7 +8,6 @@ import { Payment } from '../types/payments';
 import { usePayments } from '../context/PaymentsContext';
 
 export function Dashboard() {
-  const [payments, setPayments] = useState<Payment[]>([]);
   const { payments: ctxPayments } = usePayments();
   const convertedCtx = useMemo<Payment[]>(() => {
     return ctxPayments.map((r) => ({
@@ -17,38 +16,18 @@ export function Dashboard() {
       currency: r.currency,
       amount: r.amount,
       date: r.date,
-      status: r.status === 'completed' ? 'paid' : 'pending',
+      status: r.status === 'completed' ? 'paid' : r.status === 'pending' ? 'pending' : 'pending',
     }));
   }, [ctxPayments]);
 
   const displayPayments = useMemo<Payment[]>(() => {
-    const all = [...convertedCtx, ...payments];
-    return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [convertedCtx, payments]);
+    return convertedCtx.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [convertedCtx]);
 
   const total = useMemo(
     () => displayPayments.reduce((sum, p) => sum + p.amount, 0),
     [displayPayments]
   );
-
-  useEffect(() => {
-    let isMounted = true;
-    new Promise<Payment[]>((resolve) => {
-      setTimeout(() => {
-        resolve([
-          { id: '1', senderWallet: '0xA1B2C3D4E5F6G7H8', amount: 50, currency: 'USDT', status: 'paid', date: '2024-10-25' },
-          { id: '2', senderWallet: '0x1122AABBCCDD3344', amount: 120, currency: 'BTC', status: 'pending', date: '2024-10-26' },
-          { id: '3', senderWallet: '0x9988FFEECCDD7766', amount: 2000, currency: 'ETH', status: 'paid', date: '2024-10-27' },
-        ]);
-      }, 600);
-    }).then((data) => {
-      if (!isMounted) return;
-      setPayments(data);
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">

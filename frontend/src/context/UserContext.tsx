@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { getUserMe, updateUserMe } from '../services/Api';
 
 export interface UserData {
   fullName: string;
@@ -6,9 +7,10 @@ export interface UserData {
   username:string;
   country:string;
   phone?: string;
-  dob?: string;
+
   address?: string;
-  avatarUrl?: string;
+
+  isProfileComplete?: boolean;
 
 }
 
@@ -24,26 +26,25 @@ const initialUserData: UserData = {
   username:'',
   country:'',
   phone: '',
-  dob: '',
+
   address: '',
-  avatarUrl: '/ChatGPT Image Feb 10, 2026, 07_59_59 AM.png'
+ 
+  isProfileComplete: false
 
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [userData, setUserData] = useState<UserData>(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
-      return raw ? (JSON.parse(raw) as UserData) : initialUserData;
-    } catch {
-      return initialUserData;
-    }
-  });
+  const [userData, setUserData] = useState<UserData>(initialUserData);
 
   const updateUserData = (data: Partial<UserData>) => {
     setUserData((prev) => ({ ...prev, ...data }));
+    updateUserMe(data).then((res) => {
+      if (res?.user) {
+        setUserData(res.user as UserData);
+      }
+    }).catch(() => {});
   };
 
   const resetUserData = () => {
@@ -51,12 +52,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    try {
-      localStorage.setItem('userData', JSON.stringify(userData));
-    } catch {
-      void 0;
-    }
-  }, [userData]);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    if (!token) return;
+    getUserMe().then((res) => {
+      if (res?.user) {
+        setUserData(res.user as UserData);
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <UserContext.Provider value={{ userData, updateUserData, resetUserData }}>

@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { PaymentRecord } from '../types/paymentHistory';
+import { getMyPaymentLinks } from '../services/Api';
+import { useAuth } from './AuthContext';
 
 interface PaymentsCtx {
   payments: PaymentRecord[];
@@ -10,46 +12,33 @@ interface PaymentsCtx {
 
 const PaymentsContext = createContext<PaymentsCtx | undefined>(undefined);
 
-function generateMockPayments(): PaymentRecord[] {
-  const currencies: PaymentRecord['currency'][] = ['BTC', 'ETH', 'USDT', 'MATIC'];
-  const statuses: PaymentRecord['status'][] = ['completed', 'pending', 'failed', 'expired'];
-  return Array.from({ length: 4 }, (_, i) => ({
-    id: String(i + 1),
-    transactionId: `tx_${Math.random().toString(36).slice(2, 10)}`,
-    email: i % 2 === 0 ? `user${i}@mail.com` : undefined,
-    walletAddress: i % 2 !== 0 ? `0x${Math.random().toString(16).slice(2, 18)}` : undefined,
-    amount: Math.floor(Math.random() * 5000) + 20,
-    currency: currencies[i % currencies.length],
-    status: statuses[i % statuses.length],
-    date: new Date(Date.now() - i * 86400000).toISOString(),
-  }));
-}
-
 export function PaymentsProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { authToken } = useAuth();
 
   useEffect(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('payments') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw) as PaymentRecord[];
-        setPayments(parsed);
-        setLoading(false);
-        return;
-      }
-    } catch {
-      void 0;
-    }
-    const seed = generateMockPayments();
-    setPayments(seed);
-    try {
-      localStorage.setItem('payments', JSON.stringify(seed));
-    } catch {
-      void 0;
-    }
-    setLoading(false);
-  }, []);
+    const hydrate = async () => {
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem('payments') : null;
+        if (raw) {
+          const parsed = JSON.parse(raw) as PaymentRecord[];
+          setPayments(parsed);
+        }
+      } catch { void 0; }
+      try {
+        if (authToken) {
+          const res = await getMyPaymentLinks();
+          if (Array.isArray(res.items)) {
+            setPayments(res.items);
+            localStorage.setItem('payments', JSON.stringify(res.items));
+          }
+        }
+      } catch { void 0; }
+      setLoading(false);
+    };
+    hydrate();
+  }, [authToken]);
 
   useEffect(() => {
     try {

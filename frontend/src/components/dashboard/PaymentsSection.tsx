@@ -15,18 +15,20 @@ export function PaymentsSection({ payments }: { payments: Payment[] }) {
         <h3 className="text-lg font-semibold">Recent Payments</h3>
         <div className="flex items-center gap-2">
           <Button
+          className='cursor-pointer'
             variant={view === 'table' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setView('table')}
           >
-            <Table className="h-4 w-4" />
+            <Table className="h-4 w-4 " />
           </Button>
           <Button
+          className='cursor-pointer'
             variant={view === 'card' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setView('card')}
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-4 w-4 " />
           </Button>
         </div>
       </div>

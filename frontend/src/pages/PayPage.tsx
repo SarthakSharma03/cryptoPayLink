@@ -1,33 +1,50 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router';
+import { useParams } from 'react-router';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { motion } from 'framer-motion';
 import QRCode from 'react-qr-code';
 import { Copy } from 'lucide-react';
-
-function useQuery() {
-  const { search } = useLocation();
-  return new URLSearchParams(search);
-}
+import { getPaymentLink, PaymentLinkDTO } from '../services/Api';
 
 export function PayPage() {
-  const query = useQuery();
-  const amount = query.get('amount') || '';
-  const currency = query.get('currency') || '';
-  const wallet = query.get('wallet') || '';
-  const desc = query.get('desc') || '';
-  const expiresAt = query.get('expiresAt') || '';
+  const { token } = useParams();
+  const [data, setData] = useState<PaymentLinkDTO | null>(null);
   const [mode, setMode] = useState<'address' | 'with_amount'>('address');
   const [expireTs, setExpireTs] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<string>('20:00');
   const [expired, setExpired] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const ts = expiresAt ? new Date(expiresAt).getTime() : Date.now() + 20 * 60 * 1000;
-    setExpireTs(ts);
-  }, [expiresAt]);
+    (async () => {
+      if (!token) return;
+      try {
+        const dto = await getPaymentLink(token);
+        setData(dto);
+        const ts = new Date(dto.expiresAt).getTime();
+        setExpireTs(ts);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const id = setInterval(async () => {
+      try {
+        const dto = await getPaymentLink(token);
+        setData(dto);
+        const ts = new Date(dto.expiresAt).getTime();
+        setExpireTs(ts);
+      } catch {
+        // ignore polling errors
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [token]);
 
   useEffect(() => {
     const tick = () => {
@@ -44,22 +61,22 @@ export function PayPage() {
   }, [expireTs]);
 
   const network =
-    currency === 'BTC'
+    (data?.currency ?? '') === 'BTC'
       ? 'Bitcoin'
-      : currency === 'ETH' || currency === 'USDT' || currency === 'USDC'
+      : (data?.currency ?? '') === 'ETH' || (data?.currency ?? '') === 'USDT' || (data?.currency ?? '') === 'USDC'
       ? 'Ethereum'
-      : currency === 'MATIC'
+      : (data?.currency ?? '') === 'MATIC'
       ? 'Polygon'
-      : currency === 'SOL'
+      : (data?.currency ?? '') === 'SOL'
       ? 'Solana'
       : '—';
-  const qrAddressOnly = wallet;
+  const qrAddressOnly = data?.wallet ?? '';
   const qrWithAmount =
-    currency === 'BTC'
-      ? `bitcoin:${wallet}?amount=${amount}`
-      : currency === 'ETH' || currency === 'USDT' || currency === 'USDC' || currency === 'MATIC'
-      ? `ethereum:${wallet}?value=${amount}`
-      : `solana:${wallet}?amount=${amount}`;
+    (data?.currency ?? '') === 'BTC'
+      ? `bitcoin:${data?.wallet ?? ''}?amount=${data?.amount ?? ''}`
+      : (data?.currency ?? '') === 'ETH' || (data?.currency ?? '') === 'USDT' || (data?.currency ?? '') === 'USDC' || (data?.currency ?? '') === 'MATIC'
+      ? `ethereum:${data?.wallet ?? ''}?value=${data?.amount ?? ''}`
+      : `solana:${data?.wallet ?? ''}?amount=${data?.amount ?? ''}`;
   const qrValue = mode === 'address' ? qrAddressOnly : qrWithAmount;
 
   return (
@@ -73,6 +90,12 @@ export function PayPage() {
           className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6"
         >
           <Card className="p-6 rounded-2xl shadow-md">
+            {loading ? (
+              <div className="text-sm text-gray-600">Loading...</div>
+            ) : !data ? (
+              <div className="text-sm text-red-600">Payment link not found.</div>
+            ) : (
+            <>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Send deposit</h2>
               <div className="flex items-center gap-2">
@@ -106,10 +129,10 @@ export function PayPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-500">Amount</div>
                   <div className="flex items-center gap-2">
-                    <div className="text-lg font-bold">{amount} {currency}</div>
+                    <div className="text-lg font-bold">{data.amount} {data.currency}</div>
                     <button
                       className="rounded p-1 hover:bg-gray-100"
-                      onClick={() => navigator.clipboard.writeText(`${amount} ${currency}`)}
+                      onClick={() => navigator.clipboard.writeText(`${data.amount} ${data.currency}`)}
                       aria-label="Copy amount"
                       disabled={expired}
                     >
@@ -120,10 +143,10 @@ export function PayPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-500">Address</div>
                   <div className="flex items-center gap-2">
-                    <div className="font-mono text-xs break-all">{wallet}</div>
+                    <div className="font-mono text-xs break-all">{data.wallet}</div>
                     <button
                       className="rounded p-1 hover:bg-gray-100"
-                      onClick={() => navigator.clipboard.writeText(wallet)}
+                      onClick={() => navigator.clipboard.writeText(data.wallet)}
                       aria-label="Copy address"
                       disabled={expired}
                     >
@@ -135,16 +158,22 @@ export function PayPage() {
                   <div className="text-sm text-gray-500">Network</div>
                   <div className="text-sm">{network}</div>
                 </div>
-                {desc && (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-500">Status</div>
+                  <div className="text-sm font-semibold capitalize">{data.status}</div>
+                </div>
+                {data.description && (
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-gray-500">Description</div>
-                    <div className="text-sm">{desc}</div>
+                    <div className="text-sm">{data.description}</div>
                   </div>
                 )}
               </div>
             </div>
             {expired && (
               <div className="mt-4 text-sm text-red-600">This payment request has expired. Please generate a new link.</div>
+            )}
+            </>
             )}
           </Card>
           <Card className="p-6 rounded-2xl shadow-md">

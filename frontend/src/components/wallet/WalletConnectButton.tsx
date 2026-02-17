@@ -2,9 +2,9 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 
 export function WalletConnectButton() {
-  const { isAuthenticated, login, logout, walletAddress } = useAuth();
+  const { isWalletConnected, connectWallet, logout, walletAddress } = useAuth();
 
-  if (isAuthenticated && walletAddress) {
+  if (isWalletConnected && walletAddress) {
     return (
       <Button variant="outline" onClick={logout} className="gap-2">
         <span className="h-2 w-2 rounded-full bg-green-500" />
@@ -14,7 +14,9 @@ export function WalletConnectButton() {
   }
 
   return (
-    <Button onClick={login}>
+    <Button className='cursor-pointer' onClick={() => {
+      connectWallet();
+    }}>
       Connect Wallet
     </Button>
   );
