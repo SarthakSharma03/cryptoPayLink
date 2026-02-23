@@ -145,11 +145,21 @@ export async function webhook(req: Request, res: Response) {
 
 export async function listMyLinks(req: Request, res: Response) {
   const user = (req as any).user as { walletAddress?: string };
+
   if (!user?.walletAddress) {
     return jsonResponse(res, { message: "Unauthorized" }, 401);
   }
-  const origin = req.get("origin") || process.env.FRONTEND_URL ;
+
+  const origin =
+    req.get("origin") ??
+    process.env.FRONTEND_URL ??
+    "";
+
   const docs = await listPaymentLinksByCreator(user.walletAddress);
-  const items = docs.map((d: any) => toPaymentRecordDTO(origin, d));
+
+  const items = docs.map((d: any) =>
+    toPaymentRecordDTO(origin, d)
+  );
+
   return jsonResponse(res, { items });
 }
