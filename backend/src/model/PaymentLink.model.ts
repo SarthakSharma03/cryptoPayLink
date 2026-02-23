@@ -51,12 +51,11 @@ const paymentLinkSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    transactionId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
- 
+   transactionId: {
+  type: String,
+  default: "",
+},
+
   },
   { timestamps: true }
 );

@@ -5,7 +5,7 @@ import connectDb from "./config/db";
 import authRouter from "./routes/auth.route";
 import userRouter from "./routes/user.route";
 import paymentRouter from "./routes/payment.route";
-// import NowPaymentRouter from "./routes/nowPayments.route"
+
 
 
 
@@ -14,17 +14,23 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json({
-  verify: (req: any, _res, buf) => {
-    req.rawBody = buf?.toString() || "";
-  }
-}));
+app.use(
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
+
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/payment", paymentRouter);
-
-
+app.get("/", (_, res) => {
+  res.status(200).json({
+    message: "Backend is running successfully 🚀"
+  });
+});
 const PORT = process.env.PORT || 3000 ;
 
 connectDb()

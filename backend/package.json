@@ -2,11 +2,11 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "server for cryptoPayLink ",
-  "main": "server.ts",
+  "main": " dist/server.js",
   "scripts": {
     "dev": "npx ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.ts"
+    "start": "node dist/server.js"
   },
   "author": "Sarthak Sharma",
   "license": "ISC",

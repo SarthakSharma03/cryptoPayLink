@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { jsonResponse } from "../middleware/jsonResponse";
-import { markExpiredIfNeeded } from "../dao/paymentLink.dao";
+import { markExpiredIfNeeded, createPaymentLink } from "../dao/paymentLink.dao";
 import PaymentLinkModel from "../model/PaymentLink.model";
-import { createPaymentLinkRecord, listPaymentLinksByCreator, toPaymentRecordDTO } from "../services/paymentService";
+import { listPaymentLinksByCreator, toPaymentRecordDTO } from "../services/paymentService";
+import { createPayment,verifyIpnSignature, mapNowPaymentsStatus } from "../services/paymentsService";
 
 
 export async function createLink(req: Request, res: Response) {
@@ -33,7 +34,24 @@ export async function createLink(req: Request, res: Response) {
 
   const expiresAt = new Date(Date.now() + (expiresInMinutes ?? 20) * 60 * 1000);
 
-  const tempDoc = await createPaymentLinkRecord({
+
+  let nowPayment: any = null;
+  try {
+    nowPayment = await createPayment({
+      creatorWallet: user.walletAddress,
+      receiverWallet: wallet,
+      amount,
+      currency,
+      description,
+      payerEmail: email,
+      expiresAt,
+      shortPath: "",
+    });
+  } catch {
+    nowPayment = null;
+  }
+
+  const doc = await createPaymentLink({
     creatorWallet: user.walletAddress,
     receiverWallet: wallet,
     amount,
@@ -41,27 +59,29 @@ export async function createLink(req: Request, res: Response) {
     description,
     payerEmail: email,
     expiresAt,
-    shortPath: "/pay/placeholder", 
+    shortPath: "/pay/placeholder",
   });
 
-  const shortPath = `/pay/${tempDoc._id.toString()}`;
-  tempDoc.shortPath = shortPath;
-  await tempDoc.save();
+  if (nowPayment?.payment_id) {
+    doc.transactionId = nowPayment.payment_id;
+  }
+  doc.shortPath = `/pay/${doc._id}`;
+  await doc.save();
 
-  const origin = req.get("origin") || process.env.FRONTEND_URL || "http://localhost:5173";
-  const fullUrl = `${origin}${shortPath}`;
+  const origin = req.get("origin") || process.env.FRONTEND_URL ;
+  const fullUrl = `${origin}${doc.shortPath}`;
 
   return jsonResponse(res, {
-    id: tempDoc._id.toString(),
+    id: doc._id.toString(),
     url: fullUrl,
-    shortPath,
-    amount: tempDoc.amount,
-    currency: tempDoc.currency,
-    wallet: tempDoc.receiverWallet,
-    description: tempDoc.description || "",
-    email: tempDoc.payerEmail || "",
-    expiresAt: tempDoc.expiresAt.toISOString(),
-    status: tempDoc.status,
+    shortPath: doc.shortPath,
+    amount: doc.amount,
+    currency: doc.currency,
+    wallet: doc.receiverWallet,
+    description: doc.description || "",
+    email: doc.payerEmail || "",
+    expiresAt: doc.expiresAt.toISOString(),
+    status: doc.status,
   });
 }
 
@@ -74,7 +94,7 @@ export async function getLink(req: Request, res: Response) {
   if (!doc) {
     return jsonResponse(res, { message: "Payment link not found" }, 404);
   }
-  const origin = req.get("origin") || process.env.FRONTEND_URL || "http://localhost:5173";
+  const origin = req.get("origin") || process.env.FRONTEND_URL ;
   const fullUrl = `${origin}${doc.shortPath}`;
   return jsonResponse(res, {
     id: doc._id.toString(),
@@ -91,34 +111,36 @@ export async function getLink(req: Request, res: Response) {
   });
 }
 
+
+
 export async function webhook(req: Request, res: Response) {
-  const secretHeader = req.get("x-webhook-secret") || "";
-  const secret = process.env.WEBHOOK_SECRET || "";
-  if (!secret || secretHeader !== secret) {
-    return jsonResponse(res, { message: "Unauthorized webhook" }, 401);
+  const signature = req.headers["x-nowpayments-sig"] as string;
+  const rawBody = (req as any).rawBody;
+
+  const isValid = verifyIpnSignature(rawBody, signature);
+
+  if (!isValid) {
+    return jsonResponse(res, { message: "Invalid IPN signature" }, 401);
   }
-  const { id, status, transactionId } = req.body as {
-    id?: string;
-    status?: "pending" | "paid" | "expired" | "failed";
-    transactionId?: string;
-  };
-  if (!id) {
-    return jsonResponse(res, { message: "Payment id required" }, 400);
+
+  const { payment_id, payment_status } = req.body;
+
+  if (!payment_id) {
+    return jsonResponse(res, { message: "Payment id missing" }, 400);
   }
-  const allowed = ["pending", "paid", "expired", "failed"] as const;
-  if (!status || !allowed.includes(status)) {
-    return jsonResponse(res, { message: "Invalid status" }, 400);
-  }
-  const doc = await PaymentLinkModel.findById(id);
+
+  const doc = await PaymentLinkModel.findOne({
+    transactionId: payment_id,
+  });
+
   if (!doc) {
-    return jsonResponse(res, { message: "Payment link not found" }, 404);
+    return jsonResponse(res, { message: "Payment not found" }, 404);
   }
-  doc.status = status;
-  if (transactionId && typeof transactionId === "string") {
-    doc.transactionId = transactionId;
-  }
+
+  doc.status = mapNowPaymentsStatus(payment_status);
   await doc.save();
-  return jsonResponse(res, { ok: true, id: doc._id.toString(), status: doc.status });
+
+  return jsonResponse(res, { ok: true });
 }
 
 export async function listMyLinks(req: Request, res: Response) {
@@ -126,8 +148,8 @@ export async function listMyLinks(req: Request, res: Response) {
   if (!user?.walletAddress) {
     return jsonResponse(res, { message: "Unauthorized" }, 401);
   }
-  const origin = req.get("origin") || process.env.FRONTEND_URL || "http://localhost:5173";
+  const origin = req.get("origin") || process.env.FRONTEND_URL ;
   const docs = await listPaymentLinksByCreator(user.walletAddress);
-  const items = docs.map((d) => toPaymentRecordDTO(origin, d));
+  const items = docs.map((d: any) => toPaymentRecordDTO(origin, d));
   return jsonResponse(res, { items });
 }

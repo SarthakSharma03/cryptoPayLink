@@ -10,14 +10,13 @@ const db_1 = __importDefault(require("./config/db"));
 const auth_route_1 = __importDefault(require("./routes/auth.route"));
 const user_route_1 = __importDefault(require("./routes/user.route"));
 const payment_route_1 = __importDefault(require("./routes/payment.route"));
-// import NowPaymentRouter from "./routes/nowPayments.route"
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json({
-    verify: (req, _res, buf) => {
-        req.rawBody = buf?.toString() || "";
-    }
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString();
+    },
 }));
 app.use("/api/auth", auth_route_1.default);
 app.use("/api/user", user_route_1.default);

@@ -1,4 +1,5 @@
 import axios from "axios";
+import * as crypto from "node:crypto";
 
 const NOWPAYMENTS_BASE_URL = "https://api.nowpayments.io/v1";
 
@@ -25,9 +26,17 @@ export type CreatePaymentPayload = {
 };
 
 export async function createPayment(payload: CreatePaymentPayload) {
-  const res = await client.post("/payment", payload);
+  const res = await client.post("/payment", {
+    amount: payload.amount,
+    currency: payload.currency,
+    ipn_callback_url: process.env.IPN_URL,
+    order_id: crypto.randomUUID(),
+    description: payload.description || "Payment",
+  });
+
   return res.data;
 }
+
 
 export async function getPayment(paymentId: string) {
   const res = await client.get(`/payment/${paymentId}`);
@@ -36,11 +45,13 @@ export async function getPayment(paymentId: string) {
 
 export function verifyIpnSignature(rawBody: string | undefined, signatureHeader: string | undefined) {
   if (!ipnSecret) return false;
+  if (!rawBody) return false;
   if (!signatureHeader) return false;
   try {
-    const crypto = require("crypto") as typeof import("crypto");
-    const data = rawBody || "";
-    const hmac = crypto.createHmac("sha512", ipnSecret).update(data).digest("hex");
+    const hmac = crypto
+      .createHmac("sha512", ipnSecret)
+      .update(rawBody)
+      .digest("hex");
     return hmac === signatureHeader;
   } catch {
     return false;
