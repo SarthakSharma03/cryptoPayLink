@@ -1,5 +1,5 @@
 import NonceModel from "../model/Nonce.model";
-import crypto from "crypto";
+import * as crypto from "node:crypto";
 
 export const upsertNonce = async (walletAddress: string) => {
   const nonce = crypto.randomBytes(16).toString("hex");

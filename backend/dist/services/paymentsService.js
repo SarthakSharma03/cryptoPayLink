@@ -38,13 +38,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createPayment = createPayment;
 exports.getPayment = getPayment;
+exports.createNowPayment = createNowPayment;
+exports.getNowPayment = getNowPayment;
 exports.verifyIpnSignature = verifyIpnSignature;
 exports.mapNowPaymentsStatus = mapNowPaymentsStatus;
 const axios_1 = __importDefault(require("axios"));
 const crypto = __importStar(require("node:crypto"));
 const NOWPAYMENTS_BASE_URL = "https://api.nowpayments.io/v1";
-const apiKey = process.env.NOWPAYMENTS_API_KEY || "";
-const ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET || "";
+const apiKey = process.env.NOWPAYMENTS_API_KEY;
+const ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET;
 const client = axios_1.default.create({
     baseURL: NOWPAYMENTS_BASE_URL,
     headers: {
@@ -53,17 +55,12 @@ const client = axios_1.default.create({
     },
 });
 async function createPayment(payload) {
-    const successUrl = process.env.SUCCESS_URL || "";
-    const cancelUrl = process.env.CANCEL_URL || "";
     const res = await client.post("/payment", {
-        price_amount: payload.amount,
-        price_currency: payload.currency,
-        pay_currency: payload.currency,
+        amount: payload.amount,
+        currency: payload.currency,
         ipn_callback_url: process.env.IPN_URL,
         order_id: crypto.randomUUID(),
-        order_description: payload.description || "Payment",
-        success_url: successUrl || undefined,
-        cancel_url: cancelUrl || undefined,
+        description: payload.description || "Payment",
     });
     return res.data;
 }
@@ -71,31 +68,31 @@ async function getPayment(paymentId) {
     const res = await client.get(`/payment/${paymentId}`);
     return res.data;
 }
+async function createNowPayment(payload) {
+    const res = await client.post("/payment", {
+        price_amount: payload.price_amount,
+        price_currency: payload.price_currency,
+        pay_currency: payload.pay_currency,
+        order_id: payload.order_id ?? crypto.randomUUID(),
+        order_description: payload.order_description,
+        success_url: payload.success_url,
+        cancel_url: payload.cancel_url,
+        ipn_callback_url: payload.ipn_callback_url ?? process.env.IPN_URL,
+    });
+    return res.data;
+}
+async function getNowPayment(paymentId) {
+    const res = await client.get(`/payment/${paymentId}`);
+    return res.data;
+}
 function verifyIpnSignature(rawBody, signatureHeader) {
-    if (!ipnSecret)
+    if (!ipnSecret || !signatureHeader)
         return false;
-    if (!signatureHeader)
-        return false;
-    try {
-        // Strategy 1: Compare HMAC of raw body (common pattern)
-        if (rawBody) {
-            const h1 = crypto.createHmac("sha512", ipnSecret).update(rawBody).digest("hex");
-            if (h1 === signatureHeader)
-                return true;
-        }
-        // Strategy 2: Sort keys and stringify as per NOWPayments docs
-        if (rawBody) {
-            const obj = JSON.parse(rawBody);
-            const sorted = JSON.stringify(obj, Object.keys(obj).sort());
-            const h2 = crypto.createHmac("sha512", ipnSecret).update(sorted).digest("hex");
-            if (h2 === signatureHeader)
-                return true;
-        }
-        return false;
-    }
-    catch {
-        return false;
-    }
+    const hmac = crypto
+        .createHmac("sha512", ipnSecret)
+        .update(rawBody)
+        .digest("hex");
+    return hmac === signatureHeader;
 }
 function mapNowPaymentsStatus(status) {
     const s = status.toLowerCase();

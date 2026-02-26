@@ -57,40 +57,6 @@ const paymentLinkSchema = new mongoose_1.default.Schema({
     transactionId: {
         type: String,
         default: "",
-        index: true,
-    },
-    orderId: {
-        type: String,
-        default: "",
-        trim: true,
-    },
-    paymentUrl: {
-        type: String,
-        default: "",
-        trim: true,
-    },
-    payAddress: {
-        type: String,
-        default: "",
-        trim: true,
-    },
-    payAmount: {
-        type: Number,
-        default: 0,
-    },
-    payCurrency: {
-        type: String,
-        default: "",
-        trim: true,
-    },
-    priceAmount: {
-        type: Number,
-        default: 0,
-    },
-    priceCurrency: {
-        type: String,
-        default: "",
-        trim: true,
     },
 }, { timestamps: true });
 exports.default = mongoose_1.default.model("PaymentLink", paymentLinkSchema);

@@ -3,8 +3,8 @@ import * as crypto from "node:crypto";
 
 const NOWPAYMENTS_BASE_URL = "https://api.nowpayments.io/v1";
 
-const apiKey = process.env.NOWPAYMENTS_API_KEY || "";
-const ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET || "";
+const apiKey = process.env.NOWPAYMENTS_API_KEY ;
+const ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET ;
 
 const client = axios.create({
   baseURL: NOWPAYMENTS_BASE_URL,
@@ -43,20 +43,66 @@ export async function getPayment(paymentId: string) {
   return res.data;
 }
 
-export function verifyIpnSignature(rawBody: string | undefined, signatureHeader: string | undefined) {
-  if (!ipnSecret) return false;
-  if (!rawBody) return false;
-  if (!signatureHeader) return false;
-  try {
-    const hmac = crypto
-      .createHmac("sha512", ipnSecret)
-      .update(rawBody)
-      .digest("hex");
-    return hmac === signatureHeader;
-  } catch {
-    return false;
-  }
+export type CreateNowPaymentPayload = {
+  price_amount: number;
+  price_currency: string;
+  pay_currency?: string;
+  order_id?: string;
+  order_description?: string;
+  success_url?: string;
+  cancel_url?: string;
+  ipn_callback_url?: string;
+};
+
+export type NowPaymentDTO = {
+  payment_id: string | number;
+  payment_status: string;
+  pay_address?: string;
+  price_amount: number;
+  price_currency: string;
+  pay_amount?: number;
+  pay_currency?: string;
+  order_id?: string;
+  order_description?: string;
+  invoice_id?: string;
+  ipn_callback_url?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export async function createNowPayment(payload: CreateNowPaymentPayload): Promise<NowPaymentDTO> {
+  const res = await client.post("/payment", {
+    price_amount: payload.price_amount,
+    price_currency: payload.price_currency,
+    pay_currency: payload.pay_currency,
+    order_id: payload.order_id ?? crypto.randomUUID(),
+    order_description: payload.order_description,
+    success_url: payload.success_url,
+    cancel_url: payload.cancel_url,
+    ipn_callback_url: payload.ipn_callback_url ?? process.env.IPN_URL,
+  });
+  return res.data;
 }
+
+export async function getNowPayment(paymentId: string): Promise<NowPaymentDTO> {
+  const res = await client.get(`/payment/${paymentId}`);
+  return res.data;
+}
+
+export function verifyIpnSignature(
+  rawBody: string,
+  signatureHeader: string
+)
+ {
+   if (!ipnSecret || !signatureHeader) return false;
+  const hmac = crypto
+  .createHmac("sha512", ipnSecret )
+    .update(rawBody)
+    .digest("hex");
+
+  return hmac === signatureHeader;
+}
+
 
 export function mapNowPaymentsStatus(status: string) {
   const s = status.toLowerCase();

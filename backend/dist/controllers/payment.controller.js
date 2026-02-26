@@ -31,7 +31,6 @@ async function createLink(req, res) {
     const expiresAt = new Date(Date.now() + (expiresInMinutes ?? 20) * 60 * 1000);
     let nowPayment = null;
     try {
-        console.info("[NOWPayments] create payment request");
         nowPayment = await (0, paymentsService_1.createPayment)({
             creatorWallet: user.walletAddress,
             receiverWallet: wallet,
@@ -40,15 +39,10 @@ async function createLink(req, res) {
             description,
             payerEmail: email,
             expiresAt,
-            shortPath: "/pay/placeholder",
-        });
-        console.info("[NOWPayments] create payment ok", {
-            payment_id: nowPayment?.payment_id,
-            status: nowPayment?.payment_status,
+            shortPath: "",
         });
     }
     catch {
-        console.warn("[NOWPayments] create payment failed, proceeding local only");
         nowPayment = null;
     }
     const doc = await (0, paymentLink_dao_1.createPaymentLink)({
@@ -61,28 +55,16 @@ async function createLink(req, res) {
         expiresAt,
         shortPath: "/pay/placeholder",
     });
-    if (nowPayment) {
-        doc.transactionId = nowPayment.payment_id || doc.transactionId;
-        doc.orderId = nowPayment.order_id || doc.orderId;
-        doc.paymentUrl = nowPayment.payment_url || nowPayment.invoice_url || doc.paymentUrl;
-        doc.payAddress = nowPayment.pay_address || doc.payAddress;
-        doc.payAmount = Number(nowPayment.pay_amount ?? doc.payAmount);
-        doc.payCurrency = nowPayment.pay_currency || doc.payCurrency;
-        doc.priceAmount = Number(nowPayment.price_amount ?? doc.priceAmount);
-        doc.priceCurrency = nowPayment.price_currency || doc.priceCurrency;
-        if (nowPayment.payment_status) {
-            doc.status = (0, paymentsService_1.mapNowPaymentsStatus)(nowPayment.payment_status);
-        }
+    if (nowPayment?.payment_id) {
+        doc.transactionId = nowPayment.payment_id;
     }
     doc.shortPath = `/pay/${doc._id}`;
     await doc.save();
-    const origin = req.get("origin") || process.env.FRONTEND_URL || "http://localhost:5173";
+    const origin = req.get("origin") || process.env.FRONTEND_URL;
     const fullUrl = `${origin}${doc.shortPath}`;
     return (0, jsonResponse_1.jsonResponse)(res, {
         id: doc._id.toString(),
         url: fullUrl,
-        paymentUrl: doc.paymentUrl || "",
-        orderId: doc.orderId || "",
         shortPath: doc.shortPath,
         amount: doc.amount,
         currency: doc.currency,
@@ -119,43 +101,55 @@ async function getLink(req, res) {
     });
 }
 async function webhook(req, res) {
-    const signature = req.headers["x-nowpayments-sig"];
-    const rawBody = req.rawBody;
-    console.info("[Webhook] hit /api/payment/webhook");
-    const isValid = (0, paymentsService_1.verifyIpnSignature)(rawBody, signature);
-    if (!isValid) {
-        console.warn("[Webhook] invalid signature");
-        return (0, jsonResponse_1.jsonResponse)(res, { message: "Invalid IPN signature" }, 401);
+    try {
+        const signature = req.headers["x-nowpayments-sig"];
+        console.log(signature, "signature");
+        if (!signature) {
+            return (0, jsonResponse_1.jsonResponse)(res, { message: "Missing signature" }, 400);
+        }
+        const rawBody = req.rawBody ?? JSON.stringify(req.body ?? {});
+        const isValid = (0, paymentsService_1.verifyIpnSignature)(rawBody, signature);
+        if (!isValid) {
+            return (0, jsonResponse_1.jsonResponse)(res, { message: "Invalid IPN signature" }, 401);
+        }
+        const body = JSON.parse(rawBody);
+        const { payment_id, payment_status } = body;
+        if (!payment_id) {
+            return (0, jsonResponse_1.jsonResponse)(res, { message: "Payment id missing" }, 400);
+        }
+        const doc = await PaymentLink_model_1.default.findOne({
+            transactionId: payment_id,
+        });
+        if (!doc) {
+            return (0, jsonResponse_1.jsonResponse)(res, { message: "Payment not found" }, 404);
+        }
+        let latestStatus = payment_status;
+        try {
+            const latest = await (0, paymentsService_1.getPayment)(payment_id);
+            if (latest?.payment_status) {
+                latestStatus = latest.payment_status;
+            }
+        }
+        catch {
+            latestStatus = payment_status;
+        }
+        doc.status = (0, paymentsService_1.mapNowPaymentsStatus)(latestStatus);
+        await doc.save();
+        return (0, jsonResponse_1.jsonResponse)(res, { ok: true, status: doc.status });
     }
-    const { payment_id, payment_status, pay_address, pay_amount, pay_currency, order_id, invoice_url, payment_url } = req.body;
-    if (!payment_id) {
-        return (0, jsonResponse_1.jsonResponse)(res, { message: "Payment id missing" }, 400);
+    catch (error) {
+        console.error("Webhook error:", error);
+        return (0, jsonResponse_1.jsonResponse)(res, { message: "Webhook error" }, 500);
     }
-    const doc = await PaymentLink_model_1.default.findOne({
-        transactionId: payment_id,
-    });
-    if (!doc) {
-        return (0, jsonResponse_1.jsonResponse)(res, { message: "Payment not found" }, 404);
-    }
-    const nextStatus = (0, paymentsService_1.mapNowPaymentsStatus)(payment_status);
-    if (doc.status !== nextStatus) {
-        console.info("[Webhook] status update", { from: doc.status, to: nextStatus, id: doc._id.toString() });
-        doc.status = nextStatus;
-    }
-    doc.payAddress = pay_address || doc.payAddress;
-    doc.payAmount = Number(pay_amount ?? doc.payAmount);
-    doc.payCurrency = pay_currency || doc.payCurrency;
-    doc.orderId = order_id || doc.orderId;
-    doc.paymentUrl = payment_url || invoice_url || doc.paymentUrl;
-    await doc.save();
-    return (0, jsonResponse_1.jsonResponse)(res, { ok: true });
 }
 async function listMyLinks(req, res) {
     const user = req.user;
     if (!user?.walletAddress) {
         return (0, jsonResponse_1.jsonResponse)(res, { message: "Unauthorized" }, 401);
     }
-    const origin = req.get("origin") || process.env.FRONTEND_URL || "http://localhost:5173";
+    const origin = req.get("origin") ??
+        process.env.FRONTEND_URL ??
+        "";
     const docs = await (0, paymentService_1.listPaymentLinksByCreator)(user.walletAddress);
     const items = docs.map((d) => (0, paymentService_1.toPaymentRecordDTO)(origin, d));
     return (0, jsonResponse_1.jsonResponse)(res, { items });

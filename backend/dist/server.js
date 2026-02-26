@@ -10,6 +10,7 @@ const db_1 = __importDefault(require("./config/db"));
 const auth_route_1 = __importDefault(require("./routes/auth.route"));
 const user_route_1 = __importDefault(require("./routes/user.route"));
 const payment_route_1 = __importDefault(require("./routes/payment.route"));
+const nowpayments_route_1 = __importDefault(require("./routes/nowpayments.route"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -21,6 +22,12 @@ app.use(express_1.default.json({
 app.use("/api/auth", auth_route_1.default);
 app.use("/api/user", user_route_1.default);
 app.use("/api/payment", payment_route_1.default);
+app.use("/api/nowpayments", nowpayments_route_1.default);
+app.get("/", (_, res) => {
+    res.status(200).json({
+        message: "Backend is running successfully 🚀"
+    });
+});
 const PORT = process.env.PORT || 3000;
 (0, db_1.default)()
     .then(() => {

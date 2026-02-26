@@ -72,7 +72,7 @@ export async function loginWithWallet(walletAddress: string): Promise<string | n
       const token = await verifySignature(walletAddress, signature);
       if (token) return token;
     } catch {
-      // fall back to direct login if signing fails
+      void 0;
     }
     const res = await axiosInstance.post('/api/auth/login', { walletAddress }) as { token?: string };
     return res.token ?? null;
@@ -197,3 +197,4 @@ export async function getNowPaymentStatus(paymentId: string): Promise<NowPayment
   const res = await axiosInstance.get(`/api/nowpayments/payment/${paymentId}`) as NowPaymentDTO;
   return res;
 }
+

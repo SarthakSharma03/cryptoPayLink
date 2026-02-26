@@ -3,7 +3,7 @@ import { jsonResponse } from "../middleware/jsonResponse";
 import { markExpiredIfNeeded, createPaymentLink } from "../dao/paymentLink.dao";
 import PaymentLinkModel from "../model/PaymentLink.model";
 import { listPaymentLinksByCreator, toPaymentRecordDTO } from "../services/paymentService";
-import { createPayment,verifyIpnSignature, mapNowPaymentsStatus } from "../services/paymentsService";
+import { createPayment,verifyIpnSignature, mapNowPaymentsStatus, getPayment } from "../services/paymentsService";
 
 
 export async function createLink(req: Request, res: Response) {
@@ -113,34 +113,57 @@ export async function getLink(req: Request, res: Response) {
 
 
 
+
 export async function webhook(req: Request, res: Response) {
-  const signature = req.headers["x-nowpayments-sig"] as string;
-  const rawBody = (req as any).rawBody;
+  try {
+    const signature = req.headers["x-nowpayments-sig"] as string;
+    console.log(signature,"signature")
 
-  const isValid = verifyIpnSignature(rawBody, signature);
+    if (!signature) {
+      return jsonResponse(res, { message: "Missing signature" }, 400);
+    }
 
-  if (!isValid) {
-    return jsonResponse(res, { message: "Invalid IPN signature" }, 401);
+    const rawBody = (req as any).rawBody ?? JSON.stringify(req.body ?? {});
+
+    const isValid = verifyIpnSignature(rawBody, signature);
+
+    if (!isValid) {
+      return jsonResponse(res, { message: "Invalid IPN signature" }, 401);
+    }
+
+    const body = JSON.parse(rawBody);
+
+    const { payment_id, payment_status } = body;
+
+    if (!payment_id) {
+      return jsonResponse(res, { message: "Payment id missing" }, 400);
+    }
+
+    const doc = await PaymentLinkModel.findOne({
+      transactionId: payment_id,
+    });
+
+    if (!doc) {
+      return jsonResponse(res, { message: "Payment not found" }, 404);
+    }
+
+    let latestStatus = payment_status;
+    try {
+      const latest = await getPayment(payment_id);
+      if (latest?.payment_status) {
+        latestStatus = latest.payment_status;
+      }
+    } catch {
+      latestStatus = payment_status;
+    }
+    doc.status = mapNowPaymentsStatus(latestStatus);
+    await doc.save();
+
+    return jsonResponse(res, { ok: true, status: doc.status });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return jsonResponse(res, { message: "Webhook error" }, 500);
   }
-
-  const { payment_id, payment_status } = req.body;
-
-  if (!payment_id) {
-    return jsonResponse(res, { message: "Payment id missing" }, 400);
-  }
-
-  const doc = await PaymentLinkModel.findOne({
-    transactionId: payment_id,
-  });
-
-  if (!doc) {
-    return jsonResponse(res, { message: "Payment not found" }, 404);
-  }
-
-  doc.status = mapNowPaymentsStatus(payment_status);
-  await doc.save();
-
-  return jsonResponse(res, { ok: true });
 }
 
 export async function listMyLinks(req: Request, res: Response) {

@@ -5,6 +5,7 @@ import connectDb from "./config/db";
 import authRouter from "./routes/auth.route";
 import userRouter from "./routes/user.route";
 import paymentRouter from "./routes/payment.route";
+import nowPaymentsRouter from "./routes/nowpayments.route";
 
 
 
@@ -26,6 +27,8 @@ app.use(
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/payment", paymentRouter);
+app.use("/api/nowpayments", nowPaymentsRouter);
+
 app.get("/", (_, res) => {
   res.status(200).json({
     message: "Backend is running successfully 🚀"
