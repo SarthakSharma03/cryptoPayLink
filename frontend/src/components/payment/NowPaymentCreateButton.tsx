@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../ui/Button';
-import { createNowPayment, NowPaymentDTO } from '../../services/Api';
+import { createNowPayment, NowPaymentDTO } from '../../services/nowPayments';
 
 type Props = {
   amount: number;

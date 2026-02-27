@@ -21,5 +21,4 @@ router.get("/payment/:id", async (req, res) => {
         res.status(500).json({ message: "Failed to fetch payment" });
     }
 });
-// invoice endpoints removed
 exports.default = router;

@@ -92,16 +92,8 @@ export function PaymentDetailsPage() {
               <div className="font-mono text-xs">{record.id}</div>
             </div>
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">Original price</div>
-              <div className="text-sm">{record.currency === 'USDT' || record.currency === 'USDC' ? `${record.amount} USD` : 'N/A'}</div>
-            </div>
-            <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">Pay price</div>
               <div className="text-sm font-semibold">{record.amount} {record.currency}</div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">Actually paid</div>
-              <div className="text-sm">{record.status === 'completed' ? `${record.amount} ${record.currency}` : `0 ${record.currency}`}</div>
             </div>
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-600">Outcome price</div>
@@ -144,6 +136,27 @@ export function PaymentDetailsPage() {
             <div className="flex items-start justify-between">
               <div className="text-sm text-gray-600">Payout address</div>
               <div className="font-mono text-xs break-all">—</div>
+            </div>
+            <div className="flex items-start justify-between">
+              <div className="text-sm text-gray-600">Payer URL</div>
+              <div className="flex items-center gap-2">
+                {record.url ? (
+                  <>
+                    <a href={record.url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline break-all">
+                      {record.url}
+                    </a>
+                    <button
+                      className="rounded p-1 hover:bg-gray-100"
+                      onClick={() => navigator.clipboard.writeText(record.url!)}
+                      aria-label="Copy payer url"
+                    >
+                      <Copy className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs">—</span>
+                )}
+              </div>
             </div>
           </div>
         </Modal>

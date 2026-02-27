@@ -104,6 +104,9 @@ async function webhook(req, res) {
     try {
         const signature = req.headers["x-nowpayments-sig"];
         console.log(signature, "signature");
+        if (!process.env.NOWPAYMENTS_IPN_SECRET) {
+            return (0, jsonResponse_1.jsonResponse)(res, { message: "Server misconfiguration" }, 500);
+        }
         if (!signature) {
             return (0, jsonResponse_1.jsonResponse)(res, { message: "Missing signature" }, 400);
         }

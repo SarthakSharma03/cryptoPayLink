@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Card } from '../components/ui/Card';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
-import { getNowPaymentStatus, NowPaymentDTO } from '../services/Api';
+import { getNowPaymentStatus, NowPaymentDTO } from '../services/nowPayments';
 
 export function NowPaymentStatusPage() {
   const [params] = useSearchParams();

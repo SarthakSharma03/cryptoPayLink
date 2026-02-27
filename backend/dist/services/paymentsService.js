@@ -56,8 +56,8 @@ const client = axios_1.default.create({
 });
 async function createPayment(payload) {
     const res = await client.post("/payment", {
-        amount: payload.amount,
-        currency: payload.currency,
+        price_amount: payload.amount,
+        price_currency: payload.currency,
         ipn_callback_url: process.env.IPN_URL,
         order_id: crypto.randomUUID(),
         description: payload.description || "Payment",
@@ -92,7 +92,12 @@ function verifyIpnSignature(rawBody, signatureHeader) {
         .createHmac("sha512", ipnSecret)
         .update(rawBody)
         .digest("hex");
-    return hmac === signatureHeader;
+    const incoming = signatureHeader.trim().toLowerCase();
+    if (hmac.toLowerCase() === incoming)
+        return true;
+    const hmacB64 = crypto.createHmac("sha512", ipnSecret).update(rawBody).digest("base64").trim();
+    const incomingB64 = signatureHeader.trim();
+    return hmacB64 === incomingB64;
 }
 function mapNowPaymentsStatus(status) {
     const s = status.toLowerCase();
